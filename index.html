@@ -1,0 +1,1046 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TESY • Mini-MVP (SAP-style) – Подневно планиране</title>
+  <style>
+    :root{
+      /* TESY-ish palette (blue + light gray + orange accent) */
+      --tesy-blue:#0B5FA5;
+      --tesy-blue-2:#0A4E88;
+      --tesy-light:#EAF2FA;
+      --tesy-gray:#F3F5F7;
+      --tesy-mid:#D6DEE6;
+      --tesy-text:#1B2430;
+      --tesy-orange:#F59E0B;
+      --tesy-red:#D83A34;
+      --tesy-green:#2E9B4A;
+      --shadow: 0 6px 18px rgba(16,24,40,.12);
+      --radius: 10px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --ui: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--ui);
+      color:var(--tesy-text);
+      background:linear-gradient(180deg,#fff 0%, var(--tesy-gray) 60%, #fff 100%);
+    }
+
+    /* Top SAP-like shell */
+    .topbar{
+      background:linear-gradient(180deg,var(--tesy-blue) 0%, var(--tesy-blue-2) 100%);
+      color:#fff;
+      padding:10px 14px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      position:sticky; top:0; z-index:20;
+      box-shadow:0 2px 10px rgba(0,0,0,.18);
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight:700;
+      letter-spacing:.2px;
+      white-space:nowrap;
+    }
+    .brand .logo{
+      width:34px;height:34px;border-radius:8px;
+      background:rgba(255,255,255,.18);
+      display:grid;place-items:center;
+      border:1px solid rgba(255,255,255,.22);
+    }
+    .brand .logo svg{opacity:.95}
+    .menus{
+      display:flex; gap:8px; flex-wrap:wrap;
+      margin-left:8px;
+    }
+    .menu{
+      padding:6px 10px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.10);
+      font-size:12.5px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .menu:hover{background:rgba(255,255,255,.16)}
+    .spacer{flex:1}
+    .top-actions{display:flex;align-items:center;gap:8px}
+    .pill{
+      background:rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.20);
+      padding:6px 10px; border-radius:999px;
+      font-size:12.5px;
+      display:flex; gap:8px; align-items:center;
+      white-space:nowrap;
+    }
+    .btn{
+      border:0;
+      background:var(--tesy-orange);
+      color:#111827;
+      font-weight:700;
+      padding:8px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      box-shadow:0 6px 16px rgba(245,158,11,.25);
+    }
+    .btn:hover{filter:brightness(.98)}
+    .btn.secondary{
+      background:#fff;
+      color:var(--tesy-blue-2);
+      border:1px solid rgba(255,255,255,.0);
+      box-shadow:none;
+    }
+    .btn.secondary:hover{filter:none;background:#F8FAFC}
+    .btn.ghost{
+      background:transparent;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.22);
+      box-shadow:none;
+      font-weight:600;
+    }
+
+    /* Layout */
+    .wrap{
+      max-width:1500px;
+      margin:14px auto 30px;
+      padding:0 14px;
+      display:grid;
+      grid-template-columns: 1.2fr .85fr;
+      gap:14px;
+    }
+
+    .panel{
+      background:#fff;
+      border:1px solid var(--tesy-mid);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .panel .hdr{
+      background:linear-gradient(180deg,#FFFFFF 0%, var(--tesy-light) 100%);
+      border-bottom:1px solid var(--tesy-mid);
+      padding:10px 12px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+    }
+    .panel .hdr h2{
+      font-size:14px;
+      margin:0;
+      display:flex; align-items:center; gap:8px;
+      font-weight:800;
+    }
+    .panel .hdr small{
+      color:#5B6776;
+      font-weight:600;
+    }
+    .panel .content{padding:10px 12px}
+
+    /* SAP-like table */
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      font-size:12px;
+    }
+    thead th{
+      position:sticky; top:0;
+      background:#F8FAFC;
+      z-index:2;
+      border-bottom:1px solid var(--tesy-mid);
+      padding:8px 8px;
+      text-align:left;
+      color:#334155;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    tbody td{
+      border-bottom:1px solid #EEF2F6;
+      padding:7px 8px;
+      vertical-align:top;
+      color:#111827;
+    }
+    tbody tr:hover td{background:#FBFDFF}
+    .tbl-wrap{
+      border:1px solid var(--tesy-mid);
+      border-radius:10px;
+      overflow:auto;
+      max-height:260px;
+      background:#fff;
+    }
+
+    /* SAP gantt-like */
+    .gantt{
+      border:1px solid var(--tesy-mid);
+      border-radius:10px;
+      overflow:auto;
+      background:#fff;
+    }
+    .gantt .grid{
+      min-width:920px;
+      display:grid;
+      grid-template-columns: 240px repeat(24, 1fr);
+      border-top:1px solid #EEF2F6;
+    }
+    .gantt .head{
+      position:sticky; top:0; z-index:3;
+      display:grid;
+      grid-template-columns: 240px repeat(24, 1fr);
+      background:#F8FAFC;
+      border-bottom:1px solid var(--tesy-mid);
+    }
+    .gantt .head div{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:6px 0;
+      text-align:center;
+      border-right:1px solid #EEF2F6;
+      color:#475569;
+      font-weight:700;
+    }
+    .gantt .head .label{
+      text-align:left;
+      padding-left:10px;
+      font-family:var(--ui);
+      font-weight:800;
+      color:#334155;
+    }
+    .gantt .row{
+      display:contents;
+    }
+    .gantt .cell{
+      border-right:1px solid #F1F5F9;
+      border-bottom:1px solid #F1F5F9;
+      min-height:32px;
+      position:relative;
+    }
+    .gantt .labelcell{
+      padding:7px 10px;
+      border-right:1px solid #EEF2F6;
+      border-bottom:1px solid #F1F5F9;
+      background:#fff;
+      font-size:12px;
+      display:flex; flex-direction:column;
+      gap:2px;
+    }
+    .muted{color:#64748B}
+    .tag{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid #E2E8F0;
+      font-size:11px;
+      font-weight:800;
+      color:#334155;
+      background:#F8FAFC;
+      white-space:nowrap;
+    }
+    .tag.blue{border-color:#BBD7F0;background:#EAF2FA;color:#0A4E88}
+    .tag.orange{border-color:#FBD38D;background:#FFF6E6;color:#8A5200}
+    .tag.red{border-color:#FCA5A5;background:#FFF1F2;color:#991B1B}
+    .tag.green{border-color:#86EFAC;background:#ECFDF5;color:#166534}
+
+    /* Cards / controls */
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .field{
+      display:flex; flex-direction:column; gap:6px;
+      font-size:12px;
+    }
+    select, input[type="text"]{
+      border:1px solid var(--tesy-mid);
+      border-radius:10px;
+      padding:8px 10px;
+      font-size:12.5px;
+      outline:none;
+      background:#fff;
+    }
+    select:focus, input[type="text"]:focus{box-shadow:0 0 0 4px rgba(11,95,165,.14);border-color:#9CC4EA}
+
+    .weights{
+      display:grid;
+      gap:10px;
+    }
+    .wrow{
+      border:1px solid #EEF2F6;
+      border-radius:12px;
+      padding:10px;
+      background:linear-gradient(180deg,#fff 0%, #FBFDFF 100%);
+    }
+    .wrow .top{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      margin-bottom:8px;
+    }
+    .wrow .top b{font-size:12.5px}
+    .wrow .top span{font-family:var(--mono); font-size:12px; color:#334155; font-weight:800}
+    input[type="range"]{width:100%}
+    .hint{font-size:12px;color:#5B6776;line-height:1.35}
+
+    /* Day planner */
+    .planner{
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap:10px;
+    }
+    .day{
+      border:1px solid var(--tesy-mid);
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+      min-height:260px;
+      display:flex; flex-direction:column;
+    }
+    .day .dh{
+      padding:8px 10px;
+      background:linear-gradient(180deg,var(--tesy-light) 0%, #fff 100%);
+      border-bottom:1px solid var(--tesy-mid);
+      display:flex; align-items:center; justify-content:space-between;
+      gap:8px;
+    }
+    .day .dh b{font-size:12.5px}
+    .cap{
+      font-family:var(--mono);
+      font-size:11.5px;
+      color:#334155;
+      background:#F8FAFC;
+      border:1px solid #E2E8F0;
+      padding:3px 8px;
+      border-radius:999px;
+      white-space:nowrap;
+    }
+    .drop{
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      flex:1;
+    }
+    .order{
+      border:1px solid #E2E8F0;
+      border-radius:12px;
+      padding:9px 10px;
+      background:#fff;
+      cursor:grab;
+      user-select:none;
+      box-shadow:0 4px 12px rgba(15,23,42,.06);
+    }
+    .order:active{cursor:grabbing}
+    .order .t{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .order .t b{font-size:12.5px}
+    .order .t small{font-family:var(--mono); color:#475569; font-weight:800}
+    .order .m{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+    .order .m .chip{
+      font-size:11px;
+      font-weight:800;
+      border-radius:999px;
+      padding:2px 8px;
+      border:1px solid #E2E8F0;
+      background:#F8FAFC;
+      color:#334155;
+    }
+    .chip.blue{border-color:#BBD7F0;background:#EAF2FA;color:#0A4E88}
+    .chip.red{border-color:#FCA5A5;background:#FFF1F2;color:#991B1B}
+    .chip.green{border-color:#86EFAC;background:#ECFDF5;color:#166534}
+
+    .drop.over{outline:3px dashed rgba(11,95,165,.35); outline-offset:2px; border-radius:10px}
+
+    /* Footer status bar */
+    .status{
+      position:sticky; bottom:0; z-index:10;
+      background:#0B2239;
+      color:#E2E8F0;
+      padding:8px 14px;
+      display:flex; align-items:center; gap:12px;
+      font-size:12px;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+    .status .dot{width:8px;height:8px;border-radius:999px;background:var(--tesy-green)}
+    .kpi{
+      display:flex; gap:8px; flex-wrap:wrap;
+      margin-left:auto;
+    }
+    .kpi .k{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      padding:6px 10px; border-radius:999px;
+      font-family:var(--mono);
+    }
+
+    @media (max-width: 1180px){
+      .wrap{grid-template-columns:1fr}
+      .planner{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width: 720px){
+      .planner{grid-template-columns:1fr}
+      .menus{display:none}
+      .pill{display:none}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo" title="TESY">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2l9 4.5v11L12 22l-9-4.5v-11L12 2z" stroke="white" stroke-width="1.8" opacity=".9"/>
+          <path d="M7 9h10M7 12h10M7 15h6" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>TESY • Mini-MVP (SAP-style)</div>
+    </div>
+
+    <div class="menus">
+      <div class="menu">План</div>
+      <div class="menu">Редакция</div>
+      <div class="menu">Отчети</div>
+      <div class="menu">Инструменти</div>
+      <div class="menu">Помощ</div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="top-actions">
+      <div class="pill">
+        <span class="tag blue">Обхват: ВОБ/БОК термопомпа</span>
+        <span class="tag orange">Mini-MVP: само краен монтаж</span>
+      </div>
+      <button class="btn ghost" id="btnSim">Симулация</button>
+      <button class="btn" id="btnRecalc">Преизчисли план</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- LEFT: SAP-like planning view -->
+    <div class="panel">
+      <div class="hdr">
+        <h2>Капацитет и поръчки (ориентация – SAP стил)</h2>
+        <small id="weekLabel">Седмица: 05 (пример)</small>
+      </div>
+
+      <div class="content">
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field">
+            <label><b>Категория</b></label>
+            <select id="selScope">
+              <option selected>ВОБ / БОК термопомпа</option>
+              <option disabled>Електрически бойлер (Phase 2)</option>
+              <option disabled>Конвектор (Phase 2)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label><b>Планираща седмица</b></label>
+            <select id="selWeek">
+              <option value="05" selected>Седмица 05</option>
+              <option value="06">Седмица 06</option>
+              <option value="07">Седмица 07</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px">
+          <span class="tag blue">Ограничения: 100/200/300/500 + емайлиран/черен</span>
+          <span class="tag">Без прескачане между седмици</span>
+          <span class="tag red">Без суровини/полуфабрикати (mini-MVP)</span>
+        </div>
+
+        <!-- Gantt-like (Capacity Centers) -->
+        <div style="margin-bottom:12px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 6px 0">
+            <b style="font-size:12.5px">Работни центрове – краен монтаж (визуализация)</b>
+            <span class="muted" style="font-size:12px">24 часа (примерен изглед)</span>
+          </div>
+          <div class="gantt" aria-label="Gantt view">
+            <div class="head">
+              <div class="label">Център / участък</div>
+              <div>00</div><div>01</div><div>02</div><div>03</div><div>04</div><div>05</div>
+              <div>06</div><div>07</div><div>08</div><div>09</div><div>10</div><div>11</div>
+              <div>12</div><div>13</div><div>14</div><div>15</div><div>16</div><div>17</div>
+              <div>18</div><div>19</div><div>20</div><div>21</div><div>22</div><div>23</div>
+            </div>
+            <div class="grid" id="ganttGrid">
+              <!-- injected rows -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tables -->
+        <div class="grid2">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 6px 0">
+              <b style="font-size:12.5px">Поръчки (планирани)</b>
+              <span class="muted" style="font-size:12px">само за седмицата</span>
+            </div>
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:90px">Материал</th>
+                    <th>Описание</th>
+                    <th style="width:90px">Литраж</th>
+                    <th style="width:95px">Тип</th>
+                  </tr>
+                </thead>
+                <tbody id="tblPlanned"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 6px 0">
+              <b style="font-size:12.5px">Поръчки (пул)</b>
+              <span class="muted" style="font-size:12px">за разпределяне</span>
+            </div>
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:90px">Материал</th>
+                    <th>Описание</th>
+                    <th style="width:90px">Литраж</th>
+                    <th style="width:95px">Тип</th>
+                  </tr>
+                </thead>
+                <tbody id="tblPool"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px" class="hint">
+          * Това е демонстрационен UI за <b>mini-MVP</b>. Планирането е <b>само подневно в рамките на избраната седмица</b> и <b>само по ограниченията на крайния монтаж</b>.
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Planner panel + Day plan -->
+    <div class="panel">
+      <div class="hdr">
+        <h2>Mini-MVP: Подневен план + панел „Логика/Тегла“</h2>
+        <small>Планерът настройва приоритетите → преизчисление</small>
+      </div>
+
+      <div class="content">
+        <div class="panel" style="box-shadow:none;border-color:#E6EEF6;margin-bottom:12px">
+          <div class="hdr" style="border-bottom:1px solid #E6EEF6">
+            <h2 style="font-size:13px">Панел за логика (тегла / значимост)</h2>
+            <small><span class="tag orange">Editable</span></small>
+          </div>
+          <div class="content weights">
+            <div class="wrow">
+              <div class="top">
+                <b>Минимизирай changeover</b>
+                <span id="vChange">70</span>
+              </div>
+              <input type="range" min="0" max="100" value="70" id="wChange">
+              <div class="hint">По-високо тегло = по-силно групиране по серия/подобни изделия.</div>
+            </div>
+
+            <div class="wrow">
+              <div class="top">
+                <b>Балансирай натоварването по дни</b>
+                <span id="vBalance">60</span>
+              </div>
+              <input type="range" min="0" max="100" value="60" id="wBalance">
+              <div class="hint">По-високо тегло = по-равномерно разпределение (по-малко пикове).</div>
+            </div>
+
+            <div class="wrow">
+              <div class="top">
+                <b>Приоритет на литраж 200/300</b>
+                <span id="vVol">50</span>
+              </div>
+              <input type="range" min="0" max="100" value="50" id="wVol">
+              <div class="hint">Демо: накланя плана към предпочитани литражи при конфликт.</div>
+            </div>
+
+            <div class="wrow">
+              <div class="top">
+                <b>Предпочитай емайлирани (или черни)</b>
+                <span id="vEnam">40</span>
+              </div>
+              <input type="range" min="0" max="100" value="40" id="wEnam">
+              <div class="hint">Демо: по-високо = по-ранно/по-често планиране на емайлирани.</div>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap">
+              <button class="btn" id="btnApply">Приложи теглата</button>
+              <button class="btn secondary" id="btnReset">Reset (примерни стойности)</button>
+            </div>
+
+            <div class="hint">
+              * В реализацията теглата ще се пазят в SAP (Z-таблица) и планерът ще може да поддържа профили (например: „Стабилност“, „Минимален changeover“, „Пиков сезон“).
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span class="tag blue">Drag & Drop</span>
+            <span class="tag">Само в седмицата</span>
+          </div>
+          <button class="btn ghost" style="color:var(--tesy-blue-2);border-color:#D6DEE6;background:#fff" id="btnClear">
+            Изчисти разпределението
+          </button>
+        </div>
+
+        <div class="planner" id="planner">
+          <!-- injected days -->
+        </div>
+
+        <div style="margin-top:12px" class="hint" id="explainBox">
+          Обяснение: Натисни <b>„Преизчисли план“</b> или промени теглата и натисни <b>„Приложи теглата“</b>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <div><b>Статус:</b> <span id="statusText">Готово (демо)</span></div>
+    <div class="kpi">
+      <div class="k" id="kpi1">Планирани: 0</div>
+      <div class="k" id="kpi2">Пул: 0</div>
+      <div class="k" id="kpi3">Нарушения: 0</div>
+    </div>
+  </div>
+
+<script>
+/**
+ * Mini-MVP demo logic
+ * - Scope: only VOB/BOK thermopump (thermodynamic boilers)
+ * - Constraints: final assembly only: (100/200/300/500) + (enamel/black) + per-day caps
+ * - Planner can adjust weights; we "recalculate" a suggested daily plan.
+ * - Drag&drop allows manual within-week rescheduling.
+ *
+ * NOTE: This is UI demo, not real optimization solver.
+ */
+
+const state = {
+  week: "05",
+  weights: { change:70, balance:60, vol:50, enam:40 },
+  caps: {
+    // capacities per day for liters (demo)
+    Mon:{100:60,200:95,300:70,500:35, enamMax:140},
+    Tue:{100:60,200:95,300:70,500:35, enamMax:140},
+    Wed:{100:60,200:95,300:70,500:35, enamMax:140},
+    Thu:{100:60,200:95,300:70,500:35, enamMax:140},
+    Fri:{100:60,200:95,300:70,500:35, enamMax:140},
+  },
+  orders: [],         // all orders for week (pool+planned)
+  planByDay: { Mon:[], Tue:[], Wed:[], Thu:[], Fri:[] } // order ids
+};
+
+const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
+const DAY_BG = {Mon:"Пон",Tue:"Вт",Wed:"Ср",Thu:"Чет",Fri:"Пет"};
+
+function seedOrders(week){
+  // demo dataset changes slightly by week
+  const base = [
+    {id:"205924", name:"ВОБ черен EV1000 2X9 2X17", liters:200, type:"черен"},
+    {id:"203431", name:"ВОБ емайл EV200 AC", liters:200, type:"емайлиран"},
+    {id:"207269", name:"ВОБ черен HP 4.11 200 U01", liters:300, type:"черен"},
+    {id:"205751", name:"ВОБ черен EV500 2X6 2X13.5", liters:500, type:"черен"},
+    {id:"207262", name:"ВОБ черен EV 2X19 S 300 HP", liters:300, type:"черен"},
+    {id:"207609", name:"ВОБ черен EV300 2X19 S 450", liters:300, type:"черен"},
+    {id:"203933", name:"ВОБ черен V200 AC", liters:200, type:"черен"},
+    {id:"206393", name:"ВОБ емайл HP 3.1 260 U02", liters:300, type:"емайлиран"},
+    {id:"205937", name:"ВОБ емайл EV1500S2 DN18", liters:500, type:"емайлиран"},
+    {id:"205952", name:"ВОБ черен EV1500S1 DN18", liters:500, type:"черен"},
+    {id:"207235", name:"ВОБ черен HP 4.11 260 U01", liters:300, type:"черен"},
+    {id:"208111", name:"ВОБ емайл EV300 AC", liters:300, type:"емайлиран"},
+    {id:"208112", name:"ВОБ емайл EV200 AC (серия)", liters:200, type:"емайлиран"},
+    {id:"208113", name:"ВОБ черен EV200 AC (серия)", liters:200, type:"черен"},
+    {id:"208114", name:"ВОБ черен EV1000 2X9 2X17 (серия)", liters:200, type:"черен"},
+  ];
+
+  // tweak order count by week for demo
+  let orders = [...base];
+  if(week==="06") orders = orders.concat([
+    {id:"208201", name:"ВОБ емайл EV500 AC", liters:500, type:"емайлиран"},
+    {id:"208202", name:"ВОБ черен EV300 AC", liters:300, type:"черен"},
+    {id:"208203", name:"ВОБ черен EV100 AC", liters:100, type:"черен"},
+  ]);
+  if(week==="07") orders = orders.concat([
+    {id:"208301", name:"ВОБ емайл EV100 AC", liters:100, type:"емайлиран"},
+    {id:"208302", name:"ВОБ черен EV500 AC", liters:500, type:"черен"},
+  ]);
+
+  // mark some as "planned" vs "pool"
+  orders = orders.map((o,i)=>({
+    ...o,
+    // demo: first 4 planned, rest pool
+    bucket: i<4 ? "planned" : "pool",
+    seriesKey: o.name.includes("(серия)") ? o.liters + "-" + o.type : null
+  }));
+
+  return orders;
+}
+
+function renderGantt(){
+  const centers = [
+    {code:"T30104", desc:"ВОБ линия за опенка 100", load:"EV100/черен"},
+    {code:"T30105", desc:"ВОБ линия за опенка 200", load:"EV200/емайл"},
+    {code:"T30124", desc:"ВОБ линия за опенка 300/500", load:"EV300/EV500"}
+  ];
+  const grid = document.getElementById("ganttGrid");
+  grid.innerHTML = "";
+  centers.forEach((c, idx)=>{
+    const label = document.createElement("div");
+    label.className = "labelcell";
+    label.innerHTML = `<div><b>${c.code}</b> <span class="muted">001</span></div>
+                       <div class="muted">${c.desc}</div>`;
+    grid.appendChild(label);
+
+    for(let h=0; h<24; h++){
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      // add a red-ish "busy" band like SAP screenshot
+      const inBusy = (idx===0 && h>=7 && h<=14) || (idx===1 && h>=10 && h<=19) || (idx===2 && (h>=6 && h<=12 || h>=16 && h<=21));
+      if(inBusy){
+        const bar = document.createElement("div");
+        bar.style.position="absolute";
+        bar.style.left="2px"; bar.style.right="2px";
+        bar.style.top="6px"; bar.style.height="18px";
+        bar.style.borderRadius="6px";
+        bar.style.background= "linear-gradient(180deg, rgba(216,58,52,.92), rgba(216,58,52,.78))";
+        bar.style.border="1px solid rgba(153,27,27,.35)";
+        bar.title = "Заето (пример)";
+        cell.appendChild(bar);
+      }
+      grid.appendChild(cell);
+    }
+  });
+}
+
+function renderTables(){
+  const planned = document.getElementById("tblPlanned");
+  const pool = document.getElementById("tblPool");
+  planned.innerHTML = "";
+  pool.innerHTML = "";
+
+  state.orders.filter(o=>o.bucket==="planned").forEach(o=>{
+    planned.appendChild(row(o));
+  });
+  state.orders.filter(o=>o.bucket==="pool").forEach(o=>{
+    pool.appendChild(row(o));
+  });
+
+  document.getElementById("kpi1").textContent = "Планирани: " + state.orders.filter(o=>o.bucket==="planned").length;
+  document.getElementById("kpi2").textContent = "Пул: " + state.orders.filter(o=>o.bucket==="pool").length;
+}
+
+function row(o){
+  const tr = document.createElement("tr");
+  const tType = o.type==="емайлиран" ? `<span class="tag green">Емайл</span>` : `<span class="tag">Черен</span>`;
+  tr.innerHTML = `
+    <td style="font-family:var(--mono);font-weight:800">${o.id}</td>
+    <td>${o.name}</td>
+    <td><span class="tag blue">${o.liters} L</span></td>
+    <td>${tType}</td>
+  `;
+  return tr;
+}
+
+function renderPlanner(){
+  const planner = document.getElementById("planner");
+  planner.innerHTML = "";
+
+  DAYS.forEach(d=>{
+    const day = document.createElement("div");
+    day.className = "day";
+    day.innerHTML = `
+      <div class="dh">
+        <b>${DAY_BG[d]}</b>
+        <span class="cap" id="cap-${d}"></span>
+      </div>
+      <div class="drop" id="drop-${d}" data-day="${d}"></div>
+    `;
+    planner.appendChild(day);
+  });
+
+  // render day contents from planByDay
+  DAYS.forEach(d=>{
+    const drop = document.getElementById("drop-"+d);
+    drop.addEventListener("dragover", (e)=>{ e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", ()=> drop.classList.remove("over"));
+    drop.addEventListener("drop", (e)=>{
+      e.preventDefault();
+      drop.classList.remove("over");
+      const id = e.dataTransfer.getData("text/plain");
+      moveOrderToDay(id, d);
+    });
+
+    drop.innerHTML = "";
+    state.planByDay[d].forEach(id=>{
+      const o = state.orders.find(x=>x.id===id);
+      if(!o) return;
+      drop.appendChild(orderCard(o));
+    });
+
+    // capacity label
+    const cap = state.caps[d];
+    document.getElementById("cap-"+d).textContent =
+      `Cap: 100=${cap[100]} | 200=${cap[200]} | 300=${cap[300]} | 500=${cap[500]} | Емайл≤${cap.enamMax}`;
+  });
+
+  updateViolations();
+}
+
+function orderCard(o){
+  const el = document.createElement("div");
+  el.className = "order";
+  el.setAttribute("draggable","true");
+  el.dataset.id = o.id;
+  el.addEventListener("dragstart",(e)=>{
+    e.dataTransfer.setData("text/plain", o.id);
+  });
+
+  const typeChip = o.type==="емайлиран"
+    ? `<span class="chip green">Емайл</span>`
+    : `<span class="chip">Черен</span>`;
+
+  el.innerHTML = `
+    <div class="t">
+      <b>${o.liters} L • ${o.type}</b>
+      <small>${o.id}</small>
+    </div>
+    <div class="muted" style="margin-top:4px;font-size:12px">${o.name}</div>
+    <div class="m">
+      <span class="chip blue">ВОБ/БОК ТП</span>
+      ${typeChip}
+      ${o.seriesKey ? `<span class="chip red">Серия</span>` : ``}
+    </div>
+  `;
+  return el;
+}
+
+function clearPlan(){
+  DAYS.forEach(d=> state.planByDay[d]=[]);
+  renderPlanner();
+  setExplain("Разпределението е изчистено. Натисни „Преизчисли план“ за предложение.");
+}
+
+function moveOrderToDay(orderId, day){
+  // remove from any day
+  DAYS.forEach(d=>{
+    state.planByDay[d] = state.planByDay[d].filter(x=>x!==orderId);
+  });
+  // add to day
+  state.planByDay[day].push(orderId);
+  renderPlanner();
+  setExplain(`Поръчка ${orderId} е преместена в ${DAY_BG[day]}. (В рамките на седмицата)`);
+}
+
+function setStatus(ok, text){
+  document.getElementById("dot").style.background = ok ? getComputedStyle(document.documentElement).getPropertyValue("--tesy-green") : getComputedStyle(document.documentElement).getPropertyValue("--tesy-red");
+  document.getElementById("statusText").textContent = text;
+}
+
+function setExplain(text){
+  document.getElementById("explainBox").innerHTML = "Обяснение: " + text;
+}
+
+function updateViolations(){
+  // demo: check per-day caps by liters counts and enamel count
+  let violations = 0;
+
+  DAYS.forEach(d=>{
+    const cap = state.caps[d];
+    const ids = state.planByDay[d];
+    const counts = {100:0,200:0,300:0,500:0, enam:0};
+
+    ids.forEach(id=>{
+      const o = state.orders.find(x=>x.id===id);
+      if(!o) return;
+      counts[o.liters] = (counts[o.liters]||0) + 1;
+      if(o.type==="емайлиран") counts.enam++;
+    });
+
+    // evaluate violations (simple: if counts > cap/20 to simulate "capacity by qty")
+    // we scale because caps are in "pieces" but demo uses few orders.
+    // Interpret: 1 order card ~ 20 pcs
+    const scale = 20;
+    if(counts[100]*scale > cap[100]) violations++;
+    if(counts[200]*scale > cap[200]) violations++;
+    if(counts[300]*scale > cap[300]) violations++;
+    if(counts[500]*scale > cap[500]) violations++;
+    if(counts.enam*scale > cap.enamMax) violations++;
+  });
+
+  document.getElementById("kpi3").textContent = "Нарушения: " + violations;
+  setStatus(violations===0, violations===0 ? "Планът е валиден (демо)" : "Има нарушения на капацитет (демо)");
+}
+
+/* --- “Recalculate” (demo heuristic with weights) --- */
+function recalcPlan(){
+  clearPlan();
+
+  const pool = state.orders.filter(o=>o.bucket==="pool");
+  const planned = state.orders.filter(o=>o.bucket==="planned");
+
+  // Start with planned orders placed early (Mon/Tue)
+  const startDays = ["Mon","Tue"];
+  planned.forEach((o,i)=>{
+    const d = startDays[i%startDays.length];
+    state.planByDay[d].push(o.id);
+  });
+
+  // Sort pool by a score derived from weights (demo)
+  const w = state.weights;
+  const prefVolBoost = (o)=>(o.liters===200 || o.liters===300) ? (w.vol/100) : 0;
+  const enamBoost = (o)=>(o.type==="емайлиран") ? (w.enam/100) : 0;
+  const seriesBoost = (o)=>(o.seriesKey ? (w.change/120) : 0);
+
+  const scored = pool.map(o=>{
+    const score = prefVolBoost(o) + enamBoost(o) + seriesBoost(o);
+    return {o, score};
+  }).sort((a,b)=> b.score - a.score);
+
+  // Place orders day-by-day balancing (demo)
+  const dayLoad = {Mon:0,Tue:0,Wed:0,Thu:0,Fri:0};
+  const dayEnam = {Mon:0,Tue:0,Wed:0,Thu:0,Fri:0};
+
+  // pre-load from planned (each card ~ 20 units)
+  planned.forEach((o,i)=>{
+    const d = startDays[i%startDays.length];
+    dayLoad[d] += 20;
+    if(o.type==="емайлиран") dayEnam[d]+=20;
+  });
+
+  function bestDayFor(o){
+    // balance wants closer loads
+    // plus respect enamel max loosely
+    let best = "Mon";
+    let bestVal = -Infinity;
+    DAYS.forEach(d=>{
+      const cap = state.caps[d];
+
+      // predicted loads
+      const predictedLoad = dayLoad[d] + 20;
+      const predictedEnam = dayEnam[d] + (o.type==="емайлиран" ? 20 : 0);
+
+      // penalties if exceeding enamel cap (soft in demo)
+      const enamelPenalty = predictedEnam > cap.enamMax ? -3 : 0;
+
+      // balance score: prefer lower current load
+      const balanceScore = (w.balance/100) * (1 - (dayLoad[d]/Math.max(1, Math.max(...Object.values(dayLoad))))) ;
+
+      // changeover: if same series exists in day
+      const sameSeries = state.planByDay[d].some(id=>{
+        const x = state.orders.find(z=>z.id===id);
+        return x && x.seriesKey && o.seriesKey && x.seriesKey===o.seriesKey;
+      });
+      const changeScore = (w.change/100) * (sameSeries ? 0.8 : 0);
+
+      // simple capacity preference (demo): if liters=500, avoid Fri a bit
+      const capBias = (o.liters===500 && d==="Fri") ? -0.4 : 0;
+
+      const val = balanceScore + changeScore + capBias + enamelPenalty;
+
+      if(val > bestVal){
+        bestVal = val;
+        best = d;
+      }
+    });
+    return best;
+  }
+
+  scored.forEach(({o})=>{
+    const d = bestDayFor(o);
+    state.planByDay[d].push(o.id);
+    dayLoad[d] += 20;
+    if(o.type==="емайлиран") dayEnam[d]+=20;
+  });
+
+  renderPlanner();
+
+  setExplain(
+    `Планът е изчислен според теглата: ` +
+    `<b>Changeover=${w.change}</b>, <b>Баланс=${w.balance}</b>, <b>Литраж 200/300=${w.vol}</b>, <b>Емайл=${w.enam}</b>. ` +
+    `Можеш да промениш теглата и да преизчислиш.`
+  );
+}
+
+/* --- Weights panel bindings --- */
+function bindWeights(){
+  const ids = [
+    ["wChange","vChange","change"],
+    ["wBalance","vBalance","balance"],
+    ["wVol","vVol","vol"],
+    ["wEnam","vEnam","enam"],
+  ];
+
+  ids.forEach(([sliderId,valId,key])=>{
+    const s = document.getElementById(sliderId);
+    const v = document.getElementById(valId);
+    v.textContent = s.value;
+    s.addEventListener("input", ()=>{
+      v.textContent = s.value;
+    });
+  });
+
+  document.getElementById("btnApply").addEventListener("click", ()=>{
+    state.weights.change = +document.getElementById("wChange").value;
+    state.weights.balance = +document.getElementById("wBalance").value;
+    state.weights.vol = +document.getElementById("wVol").value;
+    state.weights.enam = +document.getElementById("wEnam").value;
+    setExplain(`Теглата са приложени. Натисни „Преизчисли план“ за ново предложение.`);
+  });
+
+  document.getElementById("btnReset").addEventListener("click", ()=>{
+    document.getElementById("wChange").value = 70;
+    document.getElementById("wBalance").value = 60;
+    document.getElementById("wVol").value = 50;
+    document.getElementById("wEnam").value = 40;
+    document.getElementById("vChange").textContent = 70;
+    document.getElementById("vBalance").textContent = 60;
+    document.getElementById("vVol").textContent = 50;
+    document.getElementById("vEnam").textContent = 40;
+    state.weights = {change:70,balance:60,vol:50,enam:40};
+    setExplain("Теглата са върнати към примерните стойности.");
+  });
+}
+
+function init(){
+  renderGantt();
+  bindWeights();
+
+  // load week orders
+  state.orders = seedOrders(state.week);
+  renderTables();
+
+  // init planner empty
+  clearPlan();
+
+  // week switching
+  const selWeek = document.getElementById("selWeek");
+  selWeek.addEventListener("change", ()=>{
+    state.week = selWeek.value;
+    document.getElementById("weekLabel").textContent = "Седмица: " + state.week + " (пример)";
+    state.orders = seedOrders(state.week);
+    renderTables();
+    clearPlan();
+    setExplain("Седмицата е сменена. Натисни „Преизчисли план“ за предложение.");
+  });
+
+  // buttons
+  document.getElementById("btnRecalc").addEventListener("click", recalcPlan);
+  document.getElementById("btnSim").addEventListener("click", ()=>{
+    setExplain("Симулация (демо): няма запис в SAP. Промените са само визуални.");
+  });
+  document.getElementById("btnClear").addEventListener("click", clearPlan);
+}
+
+init();
+</script>
+</body>
+</html>
